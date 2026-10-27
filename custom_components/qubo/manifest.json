@@ -1,6 +1,6 @@
 {
   "domain": "qubo",
-  "name": "Qubo Smart Plug",
+  "name": "Qubo",
   "codeowners": ["@Anonymous-AAA"],
   "config_flow": true,
   "dependencies": [],

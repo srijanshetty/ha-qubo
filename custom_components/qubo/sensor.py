@@ -61,21 +61,26 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the sensor platform."""
     hub = hass.data[DOMAIN][entry.entry_id]["hub"]
 
-    # Generate all 5 sensors dynamically
-    entities = [QuboSensor(hub, description) for description in SENSOR_TYPES]
+    # Only plugs report energy metrics, so plain switches get no sensors
+    entities = [
+        QuboSensor(device, description)
+        for device in hub.devices.values()
+        if device.has_metering
+        for description in SENSOR_TYPES
+    ]
     async_add_entities(entities)
 
 
 class QuboSensor(SensorEntity):
     """Representation of a Qubo Metric."""
 
-    def __init__(self, hub, description) -> None:
-        """Initialize the sensor with hub and description."""
-        self._hub = hub
+    def __init__(self, device, description) -> None:
+        """Initialize the sensor with device and description."""
+        self._device = device
         self._key = description["key"]
 
-        self._attr_name = f"{hub.device_name} {description['name']}"
-        self._attr_unique_id = f"{hub.device_uuid}_{self._key}"
+        self._attr_name = f"{device.device_name} {description['name']}"
+        self._attr_unique_id = f"{device.device_uuid}_{self._key}"
         self._attr_device_class = description["device_class"]
         self._attr_native_unit_of_measurement = description["unit"]
         self._attr_state_class = description["state_class"]
@@ -83,17 +88,12 @@ class QuboSensor(SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for the sensor."""
-        return DeviceInfo(
-            identifiers={(DOMAIN, self._hub.device_uuid)},
-            name=self._hub.device_name,
-            manufacturer="Qubo",
-            model="Smart Plug",
-        )
+        return self._device.device_info
 
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        return self._hub.metrics.get(self._key)
+        return self._device.metrics.get(self._key)
 
     @property
     def should_poll(self) -> bool:
@@ -103,12 +103,12 @@ class QuboSensor(SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if the plug is online."""
-        return self._hub.available
+        return self._device.available
 
     async def async_added_to_hass(self):
-        """Listen for MQTT updates from the Hub."""
-        self._hub.register_callback(self.async_write_ha_state)
+        """Listen for MQTT updates from the device."""
+        self._device.register_callback(self.async_write_ha_state)
 
     async def async_will_remove_from_hass(self):
         """Disconnect MQTT callbacks when the entity is removed."""
-        self._hub.unregister_callback(self.async_write_ha_state)
+        self._device.unregister_callback(self.async_write_ha_state)

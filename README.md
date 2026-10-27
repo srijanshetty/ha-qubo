@@ -1,6 +1,6 @@
-# Qubo Smart Plug for Home Assistant
+# Qubo for Home Assistant
 
-A custom integration for Home Assistant that allows you to control and monitor your Hero Electronix **Qubo Smart Plug 10A** via their cloud API.
+A custom integration for Home Assistant that allows you to control and monitor your Hero Electronix **Qubo** smart switches and plugs via their cloud API.
 
 This integration connects directly to Qubo's cloud servers and establishes a persistent MQTT connection to give you instant switch control and real-time energy metrics.
 
@@ -12,9 +12,12 @@ This integration connects directly to Qubo's cloud servers and establishes a per
 * **Auto-Discovery:** Automatically fetches your Device UUIDs and sets everything up.
 
 ## 🔌 Supported Devices
-* Qubo Smart Plug 10A (Model: HSP02 / HSP02A)
+* Qubo Smart Plug 10A (Model: HSP02 / HSP02A) — tested, with energy monitoring
+* Other Qubo smart switches and plugs — **experimental**
 
-*(Note: While built specifically for the 10A plug, it may work with the 16A variant, but this is untested.)*
+Every device on your account that exposes the `lcSwitchControl` service is added automatically. Multi-gang switches get one switch entity per gang. Energy sensors are only created for devices that report metering.
+
+*(Only the 10A plug has been tested. If another device doesn't work, enable debug logging for `custom_components.qubo` and open an issue with the logged service names. Redact UUIDs and personal details first.)*
 
 ## 📦 Installation
 
@@ -25,7 +28,7 @@ This is the easiest way to install and keep the integration updated.
 2. Go to **Integrations**, click the three dots in the top right corner, and select **Custom repositories**.
 3. Paste the URL of this repository: [https://github.com/Anonymous-AAA/ha-qubo](https://github.com/Anonymous-AAA/ha-qubo)
 4. Select **Integration** as the category and click **Add**.
-5. Click on the newly added **Qubo Smart Plug** integration and click **Download**.
+5. Click on the newly added **Qubo** integration and click **Download**.
 6. Restart Home Assistant.
 
 ### Method 2: Manual Installation
@@ -38,21 +41,21 @@ This is the easiest way to install and keep the integration updated.
 
 1. In the Home Assistant UI, go to **Settings** -> **Devices & Services**.
 2. Click the **+ Add Integration** button in the bottom right corner.
-3. Search for **Qubo Smart Plug**.
+3. Search for **Qubo**.
 4. Enter your Qubo app **Email address** and **Password**.
-5. Click Submit. The integration will automatically discover your plug and create the device!
+5. Click Submit. The integration will automatically discover your switches and plugs and create a device for each!
 
 ## 📊 Entities Created
-Once configured, the integration will create a single Device containing the following entities:
+Each Qubo device on your account gets its own Device in Home Assistant.
 
-| Entity Type | Description | Unit |
-| :--- | :--- | :--- |
-| `switch` | Toggles the plug On/Off | - |
-| `sensor` | Current Power Draw | `W` |
-| `sensor` | Electrical Current | `mA` |
-| `sensor` | Electrical Voltage | `V` |
-| `sensor` | Energy Consumption Today | `kWh` |
-| `sensor` | Time On Today | `m` |
+| Entity Type | Created for | Description | Unit |
+| :--- | :--- | :--- | :--- |
+| `switch` | All devices (one per gang) | Toggles the channel On/Off | - |
+| `sensor` | Metering plugs | Current Power Draw | `W` |
+| `sensor` | Metering plugs | Electrical Current | `mA` |
+| `sensor` | Metering plugs | Electrical Voltage | `V` |
+| `sensor` | Metering plugs | Energy Consumption Today | `kWh` |
+| `sensor` | Metering plugs | Time On Today | `m` |
 
 *Metrics are pushed from the Qubo cloud every 5 seconds while the plug is active.*
 

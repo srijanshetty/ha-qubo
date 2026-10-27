@@ -17,8 +17,11 @@ from .const import (
     DEVICE_ATTRIBUTE,
     DOMAIN,
     LOGIN_DEVICE_NAME,
+    SERVICE_METERING,
+    SERVICE_METERING_REFRESH,
+    SERVICE_SWITCH,
 )
-from .hub import QuboHub
+from .hub import QuboDevice, QuboHub
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,54 +115,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 sync_response.raise_for_status()
                 sync_data = await sync_response.json()
 
-                # 1. Extract Device & Unit UUIDs
-                # Assuming you only have one device, or we just grab the first one
                 devices = sync_data.get("devices", [])
                 if not devices:
                     _LOGGER.error("No devices found in Qubo account!")
                     return False
 
-                # Search for the specific device by name
-                qubo_device = None
-                target_name = "Smart Plug 10A"
+                shadows = {
+                    shadow.get("deviceUUID"): shadow
+                    for shadow in sync_data.get("deviceshadow", [])
+                }
 
+                qubo_devices = []
                 for device in devices:
-                    if device.get("deviceName") == target_name:
-                        qubo_device = device
-                        break
+                    qubo_device = _build_device(device, shadows)
+                    if qubo_device is not None:
+                        qubo_devices.append(qubo_device)
 
-                # Stop setup if the device wasn't found in the API response
-                if not qubo_device:
+                if not qubo_devices:
                     _LOGGER.error(
-                        "Could not find a device named '%s' in your Qubo account!",
-                        target_name,
+                        "No supported Qubo switches or plugs found in your account! Found: %s",
+                        [device.get("deviceName") for device in devices],
                     )
                     return False
-
-                device_uuid = qubo_device.get("deviceUUID")
-                unit_uuid = qubo_device.get("unitUUID")
-                device_name = qubo_device.get("deviceName")
-                handle_name = qubo_device.get("handleName")
-
-                # 2. Extract Initial State from Device Shadow
-                initial_state = False
-                initial_availability = False
-                shadows = sync_data.get("deviceshadow", [])
-                for shadow in shadows:
-                    if shadow.get("deviceUUID") == device_uuid:
-                        op_state_value = shadow.get("operationState", {}).get("value")
-                        initial_availability = (op_state_value == "online")
-
-                        services = shadow.get("services", [])
-                        for service in services:
-                            if service.get("service") == "lcSwitchControl":
-                                power_attr = service.get("attributes", {}).get(
-                                    "power", {}
-                                )
-                                initial_state = power_attr.get("value") == "on"
-                                break
-
-                _LOGGER.info("Successfully fetched Qubo data for: %s", device_name)
 
     except aiohttp.ClientError as err:
         _LOGGER.error("Failed to connect to Qubo API: %s", err)
@@ -172,14 +149,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         access_token,
         refresh_token,
         user_uuid,
-        device_uuid,
-        unit_uuid,
         expires_at,
-        initial_state,
-        device_name,
-        handle_name,
         client_id,  # Pass the client_id to the Hub
-        initial_availability
+        qubo_devices,
     )
     await hub.start()
 
@@ -189,6 +161,57 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
+
+def _build_device(device, shadows):
+    """Build a QuboDevice from sync data, or None if it has no switch service."""
+    device_uuid = device.get("deviceUUID")
+    device_name = device.get("deviceName")
+    shadow = shadows.get(device_uuid)
+    if shadow is None:
+        _LOGGER.debug("Skipping Qubo device %s: no device shadow", device_name)
+        return None
+
+    services = shadow.get("services", [])
+    service_names = {service.get("service") for service in services}
+    _LOGGER.debug("Qubo device %s exposes services: %s", device_name, service_names)
+
+    if SERVICE_SWITCH not in service_names:
+        _LOGGER.debug("Skipping Qubo device %s: no %s service", device_name, SERVICE_SWITCH)
+        return None
+
+    # Multi-gang switches report one lcSwitchControl entry per channel
+    initial_states = {}
+    for service in services:
+        if service.get("service") == SERVICE_SWITCH:
+            instance_id = int(service.get("instanceId", 0))
+            power_attr = service.get("attributes", {}).get("power", {})
+            initial_states[instance_id] = power_attr.get("value") == "on"
+
+    # Older plug firmware may not list metering in the shadow, so fall back to the name
+    has_metering = bool(
+        service_names & {SERVICE_METERING, SERVICE_METERING_REFRESH}
+    ) or "plug" in (device_name or "").lower()
+
+    op_state_value = shadow.get("operationState", {}).get("value")
+
+    _LOGGER.info(
+        "Found Qubo device %s with %d switch channel(s)%s",
+        device_name,
+        len(initial_states),
+        " and energy metering" if has_metering else "",
+    )
+
+    return QuboDevice(
+        device_uuid,
+        device.get("unitUUID"),
+        device_name,
+        device.get("handleName"),
+        sorted(initial_states),
+        initial_states,
+        has_metering,
+        op_state_value == "online",
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
