@@ -1,12 +1,12 @@
 {
   "domain": "qubo",
   "name": "Qubo",
-  "codeowners": ["@Anonymous-AAA"],
+  "codeowners": ["@srijanshetty"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/Anonymous-AAA/ha-qubo/blob/main/README.md",
+  "documentation": "https://github.com/srijanshetty/ha-qubo/blob/main/README.md",
   "iot_class": "cloud_push",
-  "issue_tracker": "https://github.com/Anonymous-AAA/ha-qubo/issues",
+  "issue_tracker": "https://github.com/srijanshetty/ha-qubo/issues",
   "requirements": ["paho-mqtt>=1.6.1"],
-  "version": "0.1.6"
+  "version": "0.2.0"
 }

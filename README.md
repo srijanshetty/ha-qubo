@@ -1,23 +1,22 @@
 # Qubo for Home Assistant
 
-A custom integration for Home Assistant that allows you to control and monitor your Hero Electronix **Qubo** smart switches and plugs via their cloud API.
+A custom integration for Home Assistant that allows you to control and monitor all Hero Electronix **Qubo** smart plugs via their cloud API.
 
 This integration connects directly to Qubo's cloud servers and establishes a persistent MQTT connection to give you instant switch control and real-time energy metrics.
 
 ## ✨ Features
 * **UI Setup:** Fully configure the integration via the Home Assistant UI (Config Flow). No `configuration.yaml` editing required!
-* **Instant Control:** Toggle your smart plug on and off instantly.
+* **Instant Control:** Toggle your smart plugs on and off instantly.
 * **Energy Monitoring:** Live tracking of Power, Current, Voltage, and total energy consumption.
 * **Stable Connection:** Proactive background token refreshing prevents the connection from silently dropping.
 * **Auto-Discovery:** Automatically fetches your Device UUIDs and sets everything up.
 
 ## 🔌 Supported Devices
-* Qubo Smart Plug 10A (Model: HSP02 / HSP02A) — tested, with energy monitoring
-* Other Qubo smart switches and plugs — **experimental**
+* All Qubo smart plugs, including the Smart Plug 10A (Model: HSP02 / HSP02A) and 16A variants
 
-Every device on your account that exposes the `lcSwitchControl` service is added automatically. Multi-gang switches get one switch entity per gang. Energy sensors are only created for devices that report metering.
+Every device on your account that exposes the `lcSwitchControl` service is added automatically. Multi-gang devices get one switch entity per gang. Energy sensors are only created for plugs that report metering.
 
-*(Only the 10A plug has been tested. If another device doesn't work, enable debug logging for `custom_components.qubo` and open an issue with the logged service names. Redact UUIDs and personal details first.)*
+*(If a device doesn't work, enable debug logging for `custom_components.qubo` and open an issue with the logged service names. Redact UUIDs and personal details first.)*
 
 ## 📦 Installation
 
@@ -26,7 +25,7 @@ This is the easiest way to install and keep the integration updated.
 
 1. Open Home Assistant and navigate to **HACS**.
 2. Go to **Integrations**, click the three dots in the top right corner, and select **Custom repositories**.
-3. Paste the URL of this repository: [https://github.com/Anonymous-AAA/ha-qubo](https://github.com/Anonymous-AAA/ha-qubo)
+3. Paste the URL of this repository: [https://github.com/srijanshetty/ha-qubo](https://github.com/srijanshetty/ha-qubo)
 4. Select **Integration** as the category and click **Add**.
 5. Click on the newly added **Qubo** integration and click **Download**.
 6. Restart Home Assistant.
@@ -43,7 +42,7 @@ This is the easiest way to install and keep the integration updated.
 2. Click the **+ Add Integration** button in the bottom right corner.
 3. Search for **Qubo**.
 4. Enter your Qubo app **Email address** and **Password**.
-5. Click Submit. The integration will automatically discover your switches and plugs and create a device for each!
+5. Click Submit. The integration will automatically discover your plugs and create a device for each!
 
 ## 📊 Entities Created
 Each Qubo device on your account gets its own Device in Home Assistant.
